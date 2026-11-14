@@ -1,0 +1,10 @@
+node_modules/
+frontend/dist/
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/smartshop.db
+*.py[cod]
+*.tsbuildinfo
+.env
+.tsupgrader/runtime-validation/standalone-result.json
