@@ -5,6 +5,23 @@ frontend, a FastAPI backend, and PostgreSQL for Docker-based runs. It includes
 catalogue search and filters, demo catalogue synchronisation, a shopping bag,
 and database-backed demo orders with stock checks.
 
+## GitHub Pages catalogue preview
+
+The GitHub Pages workflow publishes a static sample catalogue at
+`https://saaysalim.github.io/Smarshop/`. In repository **Settings → Pages**,
+set the source to **GitHub Actions**. The workflow runs on pushes to `main` and
+can also be run manually from the Actions tab.
+
+GitHub Pages cannot run the Python API or database. The preview supports
+search and boutique/stock filters, but its data is a static sample and
+shopping, checkout, and synchronisation are disabled. The full application
+remains available using the local setup below.
+
+To build the preview locally, run `python backend/export_preview.py` from the
+repository root, then set `VITE_CATALOGUE_PREVIEW=true` and run
+`npm run build` in `frontend/`. Set `VITE_BASE_PATH=/Smarshop/` when building
+for this repository's GitHub Pages URL.
+
 ## Run with Docker Compose
 
 Requirements: Docker Desktop (or Docker Engine with Compose).

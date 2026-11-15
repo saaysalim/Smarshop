@@ -28,6 +28,12 @@ type Order = {
   currency: string;
 };
 
+type PreviewCatalogue = {
+  boutiques: Boutique[];
+  products: Product[];
+};
+
+const PREVIEW_MODE = import.meta.env.VITE_CATALOGUE_PREVIEW === "true";
 const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(
   /\/$/,
   "",
@@ -73,15 +79,26 @@ export default function App() {
   const [checkoutInProgress, setCheckoutInProgress] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [previewProducts, setPreviewProducts] = useState<Product[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`${API_URL}/api/boutiques`, { signal: controller.signal })
+    const url = PREVIEW_MODE
+      ? `${import.meta.env.BASE_URL}demo-catalogue.json`
+      : `${API_URL}/api/boutiques`;
+    fetch(url, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw await responseError(response);
-        return (await response.json()) as Boutique[];
+        return (await response.json()) as Boutique[] | PreviewCatalogue;
       })
-      .then(setBoutiques)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setBoutiques(data);
+        } else {
+          setBoutiques(data.boutiques);
+          setPreviewProducts(data.products);
+        }
+      })
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setBoutiquesError(messageFromError(error));
@@ -91,6 +108,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (PREVIEW_MODE) {
+      const search = query.trim().toLowerCase();
+      setProducts(
+        previewProducts.filter(
+          (product) =>
+            (!search || product.name.toLowerCase().includes(search)) &&
+            (!boutiqueId || product.boutique_id === Number(boutiqueId)) &&
+            (!stockOnly || product.stock_quantity > 0),
+        ),
+      );
+      setLoading(false);
+      return;
+    }
+
     const controller = new AbortController();
     const params = new URLSearchParams();
     if (query.trim()) params.set("q", query.trim());
@@ -115,7 +146,7 @@ export default function App() {
       });
 
     return () => controller.abort();
-  }, [query, boutiqueId, stockOnly, reloadKey]);
+  }, [query, boutiqueId, stockOnly, reloadKey, previewProducts]);
 
   const cartTotal = useMemo(
     () =>
@@ -223,21 +254,27 @@ export default function App() {
   return (
     <main className="page">
       <header className="topbar">
-        <a className="brand" href="/" aria-label="SmartShop home">
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="SmartShop home">
           <span className="brand-mark">S</span>
           <span>smartshop</span>
         </a>
         <span className="topbar-note">Independent finds, together</span>
-        <button
+        {!PREVIEW_MODE && <button
           className="cart-toggle"
           type="button"
           aria-label={`Shopping bag, ${cartCount} items`}
           onClick={() => document.getElementById("shopping-bag")?.scrollIntoView({ behavior: "smooth" })}
         >
           Bag <span>{cartCount}</span>
-        </button>
+        </button>}
       </header>
 
+      {PREVIEW_MODE && (
+        <p className="notice preview-notice" role="status">
+          Catalogue preview: sample products and stock are not live. Shopping,
+          checkout, and catalogue sync require a separate backend.
+        </p>
+      )}
       <section className="hero">
         <div className="hero-copy">
           <p className="eyebrow">A LITTLE MORE LOCAL</p>
@@ -298,14 +335,14 @@ export default function App() {
             />
             <span>In stock</span>
           </label>
-          <button
+          {!PREVIEW_MODE && <button
             className="sync-button"
             type="button"
             onClick={syncCatalogues}
             disabled={syncing || boutiques.length === 0}
           >
             {syncing ? "Syncing…" : "↻ Sync catalogues"}
-          </button>
+          </button>}
         </div>
 
         {boutiquesError && <p className="notice error-notice" role="alert">Boutiques unavailable: {boutiquesError}</p>}
@@ -344,6 +381,8 @@ export default function App() {
             <span className="loader" aria-hidden="true"></span>
             <p>Gathering the good things…</p>
           </div>
+        ) : boutiquesError && PREVIEW_MODE ? (
+          <div className="empty-state"><p>Unable to load the sample catalogue.</p></div>
         ) : products.length > 0 ? (
           <div className="product-grid">
             {products.map((product, index) => (
@@ -363,14 +402,14 @@ export default function App() {
                 <p className="product-description">{product.description}</p>
                 <div className="product-bottom">
                   <strong>{formatPrice(product.price, product.currency)}</strong>
-                  <button
+                  {!PREVIEW_MODE && <button
                     className="add-button"
                     type="button"
                     onClick={() => addToCart(product)}
                     disabled={product.stock_quantity === 0}
                   >
                     {product.stock_quantity === 0 ? "Unavailable" : "Add to bag"}
-                  </button>
+                  </button>}
                 </div>
               </article>
             ))}
@@ -397,7 +436,7 @@ export default function App() {
         )}
       </section>
 
-      <section className="bag-section" id="shopping-bag">
+      {!PREVIEW_MODE && <section className="bag-section" id="shopping-bag">
         <div className="bag-heading">
           <div>
             <p className="eyebrow">YOUR EDIT</p>
@@ -453,10 +492,10 @@ export default function App() {
             </div>
           </>
         )}
-      </section>
+      </section>}
 
       <footer className="footer">
-        <a className="brand" href="/" aria-label="SmartShop home">
+        <a className="brand" href={import.meta.env.BASE_URL} aria-label="SmartShop home">
           <span className="brand-mark">S</span>
           <span>smartshop</span>
         </a>

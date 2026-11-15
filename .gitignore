@@ -6,5 +6,6 @@ backend/.pytest_cache/
 backend/smartshop.db
 *.py[cod]
 *.tsbuildinfo
+frontend/public/demo-catalogue.json
 .env
 .tsupgrader/runtime-validation/standalone-result.json
